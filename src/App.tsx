@@ -7,7 +7,7 @@ function App() {
   const [transcript, setTranscript] = useState('');
   const [useBrowserTranscription, setUseBrowserTranscription] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<any | null>(null);
 
   useEffect(() => {
     if (apiKey) {
@@ -34,7 +34,7 @@ function App() {
     }
 
     if (useBrowserTranscription) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (!SpeechRecognition) {
         alert('Your browser does not support Speech Recognition.');
         return;
