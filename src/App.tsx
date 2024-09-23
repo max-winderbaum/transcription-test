@@ -46,6 +46,7 @@ function App() {
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.onresult = (event: any) => {
+        console.log('onresult', event);
         let interimTranscript = '';
         for (let i = event.resultIndex; i < event.results.length; ++i) {
           if (event.results[i].isFinal) {
@@ -57,12 +58,20 @@ function App() {
           }
         }
       };
+      recognition.onerror = (event: any) => {
+        console.log('onerror', event);
+        if (event.error === 'not-allowed') {
+            alert('Microphone access was denied. Please allow microphone access and try again.');
+        } else {
+            alert(`An error occurred: ${event.error}`);
+        }
+    };
       recognition.start();
       setIsRecording(true);
     } else {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+        const mediaRecorder = new MediaRecorder(stream);
         mediaRecorderRef.current = mediaRecorder;
 
         let currentBlob: Blob | null = null;
@@ -74,7 +83,7 @@ function App() {
             if (currentBlob === null) {
               currentBlob = audioBlob;
             } else {
-              currentBlob = new Blob([currentBlob, audioBlob], { type: 'audio/webm' });
+              currentBlob = new Blob([currentBlob, audioBlob]);
             }
 
             const formData = new FormData();
