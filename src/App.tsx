@@ -102,8 +102,7 @@ function App() {
         setIsRecording(true);
       } catch (err) {
         console.error(err);
-        alert('Microphone access is disabled. Please enable it and try again.');
-        window.open('https://support.google.com/chrome/answer/2693767?hl=en&co=GENIE.Platform%3DDesktop', '_blank');
+        alert(err);
       }
     }
   };
