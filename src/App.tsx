@@ -71,7 +71,8 @@ function App() {
     } else {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const mediaRecorder = new MediaRecorder(stream);
+        const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+        const mediaRecorder = new MediaRecorder(stream, { mimeType });
         mediaRecorderRef.current = mediaRecorder;
 
         let currentBlob: Blob | null = null;
@@ -87,7 +88,7 @@ function App() {
             }
 
             const formData = new FormData();
-            formData.append('file', currentBlob, 'audio.webm');
+            formData.append('file', currentBlob, mimeType === 'audio/webm' ? 'audio.webm' : 'audio.mp4');
             formData.append('model', 'whisper-1');
 
             const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
