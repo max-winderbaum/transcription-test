@@ -1,35 +1,105 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState, useEffect, useRef } from 'react';
+import './App.css';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [apiKey, setApiKey] = useState(localStorage.getItem('apiKey') || '');
+  const [isRecording, setIsRecording] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+
+  useEffect(() => {
+    if (apiKey) {
+      localStorage.setItem('apiKey', apiKey);
+    }
+  }, [apiKey]);
+
+  const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setApiKey(e.target.value);
+  };
+
+  const handleStartRecording = async () => {
+    console.log('Starting recording');
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      console.log('No media devices or getUserMedia');
+      alert('Your browser does not support audio recording.');
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      mediaRecorderRef.current = mediaRecorder;
+
+      let currentBlob: Blob | null = null;
+
+      mediaRecorder.ondataavailable = async (event) => {
+        console.log(event);
+        if (event.data.size > 0) {
+          const audioBlob = event.data;
+          if (currentBlob === null) {
+            currentBlob = audioBlob;
+          }
+          else {
+            currentBlob = new Blob([currentBlob, audioBlob], { type: 'audio/webm' });
+          }
+
+          const formData = new FormData();
+          formData.append('file', currentBlob, 'audio.webm');
+          formData.append('model', 'whisper-1');
+
+          const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+            },
+            body: formData,
+          });
+
+          const result = await response.json();
+          if (result.error) {
+            console.error(result.error);
+          } else {
+            setTranscript(result.text);
+          }
+        }
+      };
+
+      mediaRecorder.start(1000); // Collect data in chunks of 1 second
+      setIsRecording(true);
+    } catch (err) {
+      console.error(err);
+      alert('Microphone access is disabled. Please enable it and try again.');
+      window.open('https://support.google.com/chrome/answer/2693767?hl=en&co=GENIE.Platform%3DDesktop', '_blank');
+    }
+  };
+
+  const handleStopRecording = () => {
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
 
   return (
-    <>
+    <div className="App">
+      <h1>OpenAI Whisper Demo</h1>
       <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+        <label>
+          API Key:
+          <input type="text" value={apiKey} onChange={handleApiKeyChange} />
+        </label>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
+      <div>
+        <button onClick={isRecording ? handleStopRecording : handleStartRecording}>
+          {isRecording ? 'Stop Recording' : 'Start Recording'}
         </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
       </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+      <div>
+        <h2>Transcript:</h2>
+        <p>{transcript}</p>
+      </div>
+    </div>
+  );
 }
 
-export default App
+export default App;
